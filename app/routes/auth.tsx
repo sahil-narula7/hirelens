@@ -22,6 +22,10 @@ const AuthPage = () => {
     }
   }, [auth.isAuthenticated, next]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="flex min-h-[100dvh] items-start justify-center px-4 pt-4 pb-8 sm:pt-6">
       <div className="section-card w-full max-w-xl p-8 sm:p-10">
