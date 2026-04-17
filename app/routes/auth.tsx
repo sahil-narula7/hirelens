@@ -23,7 +23,7 @@ const AuthPage = () => {
   }, [auth.isAuthenticated, next]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-8">
+    <main className="!pt-0 flex min-h-[100dvh] items-start justify-center px-4 pt-6 pb-8 sm:items-center sm:pt-8">
       <div className="section-card w-full max-w-xl p-8 sm:p-10">
         <section className="flex flex-col gap-8">
           <div className="flex flex-col items-start gap-3 text-left">
