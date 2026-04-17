@@ -4,7 +4,7 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration,
+  useLocation,
 } from "react-router";
 
 import { useEffect } from "react";
@@ -32,6 +32,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     init();
+    if (
+      typeof window !== "undefined" &&
+      "scrollRestoration" in window.history
+    ) {
+      window.history.scrollRestoration = "manual";
+    }
   }, [init]);
 
   return (
@@ -45,7 +51,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         <script src="https://js.puter.com/v2/" />
         {children}
-        <ScrollRestoration />
         <Scripts />
       </body>
     </html>
@@ -53,6 +58,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, [location.pathname, location.search]);
+
   return <Outlet />;
 }
 
