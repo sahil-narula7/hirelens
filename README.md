@@ -4,7 +4,7 @@ HireLens is an AI-powered resume analyzer that helps candidates improve resumes 
 
 ## Project Links
 
-- Live Demo (Netlify): https://your-site-name.netlify.app
+- Live Demo : hirelens7.netlify.app
 
 ## Features
 
