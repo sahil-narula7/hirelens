@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import ResumeCard from "~/components/ResumeCard";
-import { usePuterStore } from "~/lib/puter";
+import { listReviewSummaries } from "~/lib/localReviews";
+import { useSupabaseAuthStore } from "~/lib/supabase";
 import Navbar from "../components/Navbar";
 import type { Route } from "./+types/home";
 
@@ -13,7 +14,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { auth, kv } = usePuterStore();
+  const { auth } = useSupabaseAuthStore();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loadingResumes, setLoadingResumes] = useState(false);
 
@@ -23,18 +24,13 @@ export default function Home() {
     if (!auth.isAuthenticated) {
       navigate("/auth?next=/");
     }
-  }, [auth.isAuthenticated]);
+  }, [auth.isAuthenticated, navigate]);
 
   useEffect(() => {
     const loadResumes = async () => {
       setLoadingResumes(true);
-      const resumes = (await kv.list("resume:*", true)) as KVItem[];
-
-      const parsedResumes = resumes?.map((resume) => {
-        const data = JSON.parse(resume.value);
-        return data as Resume;
-      });
-      setResumes(parsedResumes || []);
+      const localResumes = await listReviewSummaries();
+      setResumes(localResumes || []);
       setLoadingResumes(false);
     };
     loadResumes();

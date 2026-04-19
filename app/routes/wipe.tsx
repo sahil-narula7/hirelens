@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { usePuterStore } from "~/lib/puter";
+import { clearAllReviews, getReviewCount } from "~/lib/localReviews";
+import { useSupabaseAuthStore } from "~/lib/supabase";
 
 const WipeApp = () => {
-  const { auth, isLoading, error, clearError, fs, ai, kv } = usePuterStore();
+  const { auth, isLoading } = useSupabaseAuthStore();
   const navigate = useNavigate();
-  const [files, setFiles] = useState<FSItem[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
   const [isWiping, setIsWiping] = useState(false);
 
-  const loadFiles = async () => {
-    const files = (await fs.readDir("./")) as FSItem[];
-    setFiles(files);
+  const loadReviewCount = async () => {
+    const count = await getReviewCount();
+    setReviewCount(count);
   };
 
   useEffect(() => {
-    loadFiles();
+    loadReviewCount();
   }, []);
 
   useEffect(() => {
@@ -25,11 +26,8 @@ const WipeApp = () => {
 
   const handleDelete = async () => {
     setIsWiping(true);
-    files.forEach(async (file) => {
-      await fs.delete(file.path);
-    });
-    await kv.flush();
-    loadFiles();
+    await clearAllReviews();
+    await loadReviewCount();
     setIsWiping(false);
   };
 
@@ -37,21 +35,10 @@ const WipeApp = () => {
     return <div>Loading...</div>;
   }
 
-  if (error) {
-    return <div>Error {error}</div>;
-  }
-
   return (
     <div>
-      Authenticated as: {auth.user?.username}
-      <div>Existing files:</div>
-      <div className="flex flex-col gap-4">
-        {files.map((file) => (
-          <div key={file.id} className="flex flex-row gap-4">
-            <p>{file.name}</p>
-          </div>
-        ))}
-      </div>
+      Authenticated as: {auth.user?.email}
+      <div>Stored reviews: {reviewCount}</div>
       <div>
         <button
           className="bg-blue-500 text-white px-4 py-2 rounded-md cursor-pointer"

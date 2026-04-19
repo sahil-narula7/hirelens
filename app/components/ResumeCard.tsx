@@ -1,22 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { usePuterStore } from "~/lib/puter";
+import { getReviewImageObjectUrl } from "~/lib/localReviews";
 import ScoreCircle from "./ScoreCircle";
 
 const ResumeCard = ({ resume }: { resume: Resume }) => {
-  const { fs } = usePuterStore();
-  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
-  const [score, setScore] = useState<number>(0);
+  const score = useMemo(() => resume.feedback.overallScore, [resume.feedback]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   useEffect(() => {
-    const loadResume = async () => {
-      const blob = await fs.read(resume.imagePath);
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      setResumeUrl(url);
+    let isMounted = true;
+    let localUrl: string | null = null;
+
+    const loadPreview = async () => {
+      const imageUrl = await getReviewImageObjectUrl(resume.id);
+      if (!isMounted) {
+        if (imageUrl) URL.revokeObjectURL(imageUrl);
+        return;
+      }
+
+      localUrl = imageUrl;
+      setPreviewUrl(imageUrl);
     };
-    loadResume();
-    setScore(resume.feedback.overallScore);
-  }, [resume.imagePath]);
+
+    loadPreview();
+
+    return () => {
+      isMounted = false;
+      if (localUrl) URL.revokeObjectURL(localUrl);
+    };
+  }, [resume.id]);
+
   return (
     <Link
       to={`/resume/${resume.id}`}
@@ -45,11 +58,11 @@ const ResumeCard = ({ resume }: { resume: Resume }) => {
           <ScoreCircle score={score} />
         </div>
       </div>
-      {resumeUrl && (
+      {previewUrl && (
         <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 animate-in fade-in duration-1000">
           <div className="w-full h-full">
             <img
-              src={resumeUrl}
+              src={previewUrl}
               alt="resume"
               className="w-full h-[350px] max-sm:h-[220px] object-cover object-top transition duration-500 group-hover:scale-[1.01]"
             />

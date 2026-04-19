@@ -1,62 +1,90 @@
 # HireLens
 
-HireLens is an AI-powered resume analyzer that helps candidates improve resumes with ATS-focused scoring, keyword alignment insights, and actionable recommendations.
+HireLens is a resume review web app with secure Supabase authentication, PDF upload, resume preview, ATS-style scoring, and structured feedback.
 
-## Project Links
+## Live Demo
 
-- Live Demo : https://hirelens7.netlify.app
+- https://hirelens7.netlify.app
 
-## Features
+## What It Does
 
-- PDF resume upload and preview
-- ATS score and section-wise evaluation
-- Feedback on tone, content, structure, and skills
-- Actionable improvement suggestions
-- Clean, responsive dashboard UI
+- Sign up / sign in with Supabase Auth
+- Upload PDF resumes
+- Convert first PDF page to image preview using PDF.js
+- Generate structured review feedback (overall score + ATS, tone, content, structure, skills)
+- Save reviews locally in browser IndexedDB
+- Browse past reviews from the dashboard
+
+## Current Data Behavior
+
+- Reviews are stored locally in the browser (IndexedDB)
+- Reviews do not sync across devices or browsers
+- Clearing browser site data removes saved reviews
 
 ## Tech Stack
 
 - React 19
-- React Router 7
+- React Router 7 (SPA mode)
 - TypeScript
 - Tailwind CSS v4
 - Zustand
+- Supabase JS
 - PDF.js
 
 ## Getting Started
 
-### 1. Clone and install
+### 1. Install dependencies
 
 ```bash
-git clone https://github.com/sahil-narula7/hirelens.git
-cd hirelens
 npm install
 ```
 
-### 2. Run locally
+### 2. Create environment file
+
+Create `.env.local` with:
+
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_publishable_key
+```
+
+### 3. Run locally
 
 ```bash
 npm run dev
 ```
 
-### 3. Build for production
+### 4. Production build
 
 ```bash
 npm run build
 ```
 
-### 4. Run production server
+### 5. Optional local production serve
 
 ```bash
 npm start
 ```
 
-## Deployment (Netlify)
+## Netlify Deployment
 
-For static deployment on Netlify:
+This project is configured for static SPA hosting.
 
-1. Set `ssr: false` in `react-router.config.ts`.
-2. Add a `netlify.toml` file in the project root with:
+### Required settings
+
+- Build command: `npm run build`
+- Publish directory: `build/client`
+
+### Environment variables
+
+Set these in Netlify Site Settings -> Environment Variables:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+### Routing
+
+The existing `netlify.toml` SPA redirect is already correct:
 
 ```toml
 [build]
@@ -69,16 +97,14 @@ For static deployment on Netlify:
 	status = 200
 ```
 
-3. In Netlify site settings:
-   - Build command: `npm run build`
-   - Publish directory: `build/client`
+### Supabase Auth callback setup
 
-## Docker
+In Supabase dashboard, add your Netlify domain to allowed redirect URLs.
 
-```bash
-docker build -t hirelens .
-docker run -p 3000:3000 hirelens
-```
+## Notes
+
+- App runs in SPA mode (`ssr: false`)
+- Build is currently passing (`npm run build`)
 
 ## License
 

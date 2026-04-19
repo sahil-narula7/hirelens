@@ -10,7 +10,7 @@ import {
 import { useEffect } from "react";
 import type { Route } from "./+types/root";
 import "./app.css";
-import { usePuterStore } from "./lib/puter";
+import { useSupabaseAuthStore } from "./lib/supabase";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -28,17 +28,11 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { init } = usePuterStore();
-
   useEffect(() => {
-    init();
-    if (
-      typeof window !== "undefined" &&
-      "scrollRestoration" in window.history
-    ) {
+    if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
-  }, [init]);
+  }, []);
 
   return (
     <html lang="en">
@@ -55,7 +49,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <script src="https://js.puter.com/v2/" />
         {children}
         <Scripts />
       </body>
@@ -65,6 +58,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const location = useLocation();
+  const init = useSupabaseAuthStore((state) => state.init);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -73,6 +67,13 @@ export default function App() {
       document.body.scrollTop = 0;
     }
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    // Initialize Supabase auth state on app load
+    if (typeof window !== "undefined") {
+      init();
+    }
+  }, [init]);
 
   return <Outlet />;
 }

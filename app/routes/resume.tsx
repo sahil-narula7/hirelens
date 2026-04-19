@@ -3,7 +3,12 @@ import { Link, useNavigate, useParams } from "react-router";
 import ATS from "~/components/feebdack/ATS";
 import Details from "~/components/feebdack/Details";
 import Summary from "~/components/feebdack/Summary";
-import { usePuterStore } from "~/lib/puter";
+import {
+  getReviewImageObjectUrl,
+  getReviewPdfObjectUrl,
+  getReviewRecord,
+} from "~/lib/localReviews";
+import { useSupabaseAuthStore } from "~/lib/supabase";
 import type { Route } from "./+types/resume";
 
 export function meta({}: Route.MetaArgs) {
@@ -17,35 +22,64 @@ const ResumePage = () => {
   const { id } = useParams();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [resumeData, setResumeData] = useState<Resume | null>(null);
-  const { auth, isLoading, fs, kv } = usePuterStore();
+  const { auth, isLoading: authLoading } = useSupabaseAuthStore();
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && !auth.isAuthenticated) {
+    if (!authLoading && !auth.isAuthenticated) {
       navigate(`/auth?next=/resume/${id}`);
     }
-  }, [isLoading]);
+  }, [authLoading, auth.isAuthenticated, id, navigate]);
 
   useEffect(() => {
+    let isMounted = true;
+    let localPdfUrl: string | null = null;
+    let localImageUrl: string | null = null;
+
     const loadResume = async () => {
-      const resume = await kv.get(`resume:${id}`);
-      if (!resume) return;
-      const data = JSON.parse(resume);
-      setResumeData(data);
-      const resumeBlob = await fs.read(data.resumePath);
-      if (!resumeBlob) return;
-      const pdfBlob = new Blob([resumeBlob], { type: "application/pdf" });
-      const resumeUrl = URL.createObjectURL(pdfBlob);
-      setResumeUrl(resumeUrl);
-      const imageBlob = await fs.read(data.imagePath);
-      if (!imageBlob) return;
-      const imageUrl = URL.createObjectURL(imageBlob);
-      setImageUrl(imageUrl);
-      setFeedback(data.feedback);
+      if (!id) return;
+
+      const record = await getReviewRecord(id);
+      if (!record) return;
+
+      if (!isMounted) return;
+
+      setResumeData({
+        id: record.id,
+        companyName: record.companyName,
+        jobTitle: record.jobTitle,
+        imagePath: record.imageFileName,
+        resumePath: record.resumeFileName,
+        feedback: record.feedback,
+      });
+
+      const [pdfUrl, previewUrl] = await Promise.all([
+        getReviewPdfObjectUrl(id),
+        getReviewImageObjectUrl(id),
+      ]);
+
+      if (!isMounted) {
+        if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        return;
+      }
+
+      localPdfUrl = pdfUrl;
+      localImageUrl = previewUrl;
+      setResumeUrl(pdfUrl);
+      setImageUrl(previewUrl);
+      setFeedback(record.feedback);
     };
+
     loadResume();
+
+    return () => {
+      isMounted = false;
+      if (localPdfUrl) URL.revokeObjectURL(localPdfUrl);
+      if (localImageUrl) URL.revokeObjectURL(localImageUrl);
+    };
   }, [id]);
 
   return (

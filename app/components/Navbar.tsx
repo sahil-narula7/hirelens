@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "react-router";
-import { usePuterStore } from "~/lib/puter";
+import { useSupabaseAuthStore } from "~/lib/supabase";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { auth } = usePuterStore();
+  const { auth } = useSupabaseAuthStore();
 
   const handleLogout = async () => {
     await auth.signOut();

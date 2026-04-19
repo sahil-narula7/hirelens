@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import FileUploader from "~/components/FileUploader";
 import Navbar from "~/components/Navbar";
-import { AIResponseFormat } from "~/constants";
+import { generateLocalFeedback } from "~/lib/localFeedback";
+import { saveReviewRecord } from "~/lib/localReviews";
 import { convertPdfToImage } from "~/lib/pdf2img";
-import { usePuterStore } from "~/lib/puter";
+import { useSupabaseAuthStore } from "~/lib/supabase";
 import { generateUUID } from "~/lib/utils";
 import type { Route } from "./+types/upload";
 
@@ -16,17 +17,18 @@ export function meta({}: Route.MetaArgs) {
 }
 
 const UploadPage = () => {
-  const { auth, isLoading, error, fs, ai, kv } = usePuterStore();
+  const { auth, isLoading: authLoading } = useSupabaseAuthStore();
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [statusText, setStatusText] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string>("");
 
   useEffect(() => {
-    if (!isLoading && !auth.isAuthenticated) {
+    if (!authLoading && !auth.isAuthenticated) {
       navigate("/auth?next=/upload");
     }
-  }, [isLoading]);
+  }, [authLoading, auth.isAuthenticated, navigate]);
 
   const handleFileSelect = (file: File | null) => {
     setFile(file);
@@ -58,73 +60,48 @@ const UploadPage = () => {
     file: File;
   }) => {
     setIsProcessing(true);
-    setStatusText("Uploading the file...");
-    const uploadedFile = await fs.upload([file]);
-
-    if (!uploadedFile) {
-      setStatusText("Error: Failed to upload file");
-      return;
-    }
+    setUploadError("");
+    setStatusText("Preparing resume data...");
 
     setStatusText("Converting to image...");
     const imageFile = await convertPdfToImage(file);
 
     if (!imageFile.file) {
-      setStatusText("Error: Failed to convert PDF to image");
+      const errorMsg = "Error: Failed to convert PDF to image";
+      setStatusText(errorMsg);
+      setUploadError(errorMsg);
+      setIsProcessing(false);
       return;
     }
 
-    setStatusText("Uploading the image...");
-    const uploadedImage = await fs.upload([imageFile.file]);
-
-    if (!uploadedImage) {
-      setStatusText("Error: Failed to upload image");
-      return;
-    }
-
-    setStatusText("Preparing data...");
     const uuid = generateUUID();
-    const data = {
-      id: uuid,
-      resumePath: uploadedFile.path,
-      imagePath: uploadedImage.path,
-      companyName: companyName,
-      jobTitle: jobTitle,
-      jobDescription: jobDescription,
-      feedback: "",
-    };
-    await kv.set(`resume:${uuid}`, JSON.stringify(data));
-
     setStatusText("Analyzing...");
-    const feedback = await ai.feedback(
-      uploadedFile.path,
-      `You are an expert in ATS (Applicant Tracking System) and resume analysis.
-      Please analyze and rate this resume and suggest how to improve it.
-      The rating can be low if the resume is bad.
-      Be thorough and detailed. Don't be afraid to point out any mistakes or areas for improvement.
-      If there is a lot to improve, don't hesitate to give low scores. This is to help the user to improve their resume.
-      If available, use the job description for the job user is applying to to give more detailed feedback.
-      If provided, take the job description into consideration.
-      The job title is: ${jobTitle}
-      The job description is: ${jobDescription}
-      Provide the feedback using the following format:
-      ${AIResponseFormat}
-      Return the analysis as an JSON object, without any other text and without the backticks.
-      Do not include any other text or comments.`,
-    );
+    const feedback = generateLocalFeedback({
+      companyName,
+      jobTitle,
+      jobDescription,
+      fileName: file.name,
+    });
 
-    if (!feedback) {
-      setStatusText("Error: Failed to analyze resume");
+    try {
+      setStatusText("Saving review...");
+      await saveReviewRecord({
+        id: uuid,
+        companyName,
+        jobTitle,
+        jobDescription,
+        feedback,
+        resumeFile: file,
+        imageFile: imageFile.file,
+      });
+    } catch (_err) {
+      const errorMsg = "Error: Failed to save local review";
+      setStatusText(errorMsg);
+      setUploadError(errorMsg);
+      setIsProcessing(false);
       return;
     }
 
-    const feedbackText =
-      typeof feedback.message.content === "string"
-        ? feedback.message.content
-        : feedback.message.content[0].text;
-    data.feedback = JSON.parse(feedbackText);
-
-    await kv.set(`resume:${uuid}`, JSON.stringify(data));
     setStatusText("Analysis complete, redirecting...");
     navigate(`/resume/${uuid}`);
   };
@@ -148,6 +125,20 @@ const UploadPage = () => {
                     Provide the target role and job description so the analysis
                     can be aligned with the position.
                   </h2>
+                )}
+
+                {uploadError && (
+                  <div className="rounded bg-red-500/20 p-4 text-sm text-red-300">
+                    {uploadError}
+                    {!isProcessing && (
+                      <button
+                        onClick={() => setUploadError("")}
+                        className="ml-4 text-red-200 hover:text-red-100"
+                      >
+                        Dismiss
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {isProcessing && (
