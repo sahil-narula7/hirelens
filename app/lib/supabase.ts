@@ -7,6 +7,7 @@ import { create } from "zustand";
 
 // Initialize Supabase client
 let supabaseClient: SupabaseClient | null = null;
+let supabaseConfigError: string | null = null;
 
 const getSupabase = (): SupabaseClient | null => {
   if (typeof window === "undefined") return null;
@@ -16,10 +17,19 @@ const getSupabase = (): SupabaseClient | null => {
     const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
     if (!url || !key) {
-      console.warn("Missing Supabase credentials in environment variables");
+      const missingVars = [
+        !url ? "VITE_SUPABASE_URL" : null,
+        !key ? "VITE_SUPABASE_ANON_KEY" : null,
+      ].filter(Boolean);
+
+      supabaseConfigError = `Missing Supabase environment variable(s): ${missingVars.join(
+        ", ",
+      )}`;
+      console.warn(supabaseConfigError);
       return null;
     }
 
+    supabaseConfigError = null;
     supabaseClient = createClient(url, key);
   }
 
@@ -64,7 +74,7 @@ export const useSupabaseAuthStore = create<SupabaseAuthStore>((set, get) => {
   const checkAuthStatus = async (): Promise<boolean> => {
     const supabase = getSupabase();
     if (!supabase) {
-      setError("Supabase client not initialized");
+      setError(supabaseConfigError || "Supabase client not initialized");
       return false;
     }
 
@@ -118,7 +128,7 @@ export const useSupabaseAuthStore = create<SupabaseAuthStore>((set, get) => {
   const signIn = async (email: string, password: string): Promise<void> => {
     const supabase = getSupabase();
     if (!supabase) {
-      setError("Supabase client not initialized");
+      setError(supabaseConfigError || "Supabase client not initialized");
       return;
     }
 
@@ -145,7 +155,7 @@ export const useSupabaseAuthStore = create<SupabaseAuthStore>((set, get) => {
   const signUp = async (email: string, password: string): Promise<void> => {
     const supabase = getSupabase();
     if (!supabase) {
-      setError("Supabase client not initialized");
+      setError(supabaseConfigError || "Supabase client not initialized");
       return;
     }
 
@@ -173,7 +183,7 @@ export const useSupabaseAuthStore = create<SupabaseAuthStore>((set, get) => {
   const signOut = async (): Promise<void> => {
     const supabase = getSupabase();
     if (!supabase) {
-      setError("Supabase client not initialized");
+      setError(supabaseConfigError || "Supabase client not initialized");
       return;
     }
 
@@ -209,7 +219,7 @@ export const useSupabaseAuthStore = create<SupabaseAuthStore>((set, get) => {
   const resetPassword = async (email: string): Promise<void> => {
     const supabase = getSupabase();
     if (!supabase) {
-      setError("Supabase client not initialized");
+      setError(supabaseConfigError || "Supabase client not initialized");
       return;
     }
 
@@ -274,7 +284,7 @@ export const useSupabaseAuthStore = create<SupabaseAuthStore>((set, get) => {
         subscription?.unsubscribe();
       };
     } else {
-      setError("Supabase not available");
+      setError(supabaseConfigError || "Supabase not available");
     }
   };
 
