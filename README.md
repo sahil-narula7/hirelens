@@ -82,6 +82,13 @@ Set these in Netlify Site Settings -> Environment Variables:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
+Optional (also supported by app fallback logic):
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+After changing env vars, trigger a new deploy. Vite injects env vars at build time.
+
 ### Routing
 
 The existing `netlify.toml` SPA redirect is already correct:

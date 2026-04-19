@@ -9,22 +9,33 @@ import { create } from "zustand";
 let supabaseClient: SupabaseClient | null = null;
 let supabaseConfigError: string | null = null;
 
+const readEnvVar = (...keys: string[]): string | undefined => {
+  for (const key of keys) {
+    const value = import.meta.env[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
 const getSupabase = (): SupabaseClient | null => {
   if (typeof window === "undefined") return null;
 
   if (!supabaseClient) {
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const url = readEnvVar("VITE_SUPABASE_URL", "SUPABASE_URL");
+    const key = readEnvVar("VITE_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY");
 
     if (!url || !key) {
       const missingVars = [
-        !url ? "VITE_SUPABASE_URL" : null,
-        !key ? "VITE_SUPABASE_ANON_KEY" : null,
+        !url ? "VITE_SUPABASE_URL / SUPABASE_URL" : null,
+        !key ? "VITE_SUPABASE_ANON_KEY / SUPABASE_ANON_KEY" : null,
       ].filter(Boolean);
 
       supabaseConfigError = `Missing Supabase environment variable(s): ${missingVars.join(
         ", ",
-      )}`;
+      )}. If this is deployed on Netlify, add them in Site Settings > Environment variables and redeploy.`;
       console.warn(supabaseConfigError);
       return null;
     }
